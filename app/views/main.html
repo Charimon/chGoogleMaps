@@ -1,0 +1,11 @@
+<button ng-click='resetCenter()'>reset center</button>
+<button ng-click='reset()'>reset markers</button>
+<button ng-click='resetHard()'>reset hard</button>
+<button ng-click='resetPolygons()'>reset polygons</button>
+<button ng-click='resetPolygonsHard()'>reset polygons hard</button>
+<map type='terrain' center="map.center" zoom="map.zoom" draggable="true" pan="true" events="map.events">
+  <marker ng-repeat="marker in markers track by marker.id" position="marker" icon="marker.icon" events='map.markerEvents'></marker>
+  <polygon ng-repeat="polygon in polygons track by polygon.id" events='map.polygonEvents'>
+    <path coordinates="polygon.path"></path>
+  </polygon>
+</map>

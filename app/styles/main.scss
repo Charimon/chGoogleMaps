@@ -1,0 +1,26 @@
+// bower:scss
+// endbower
+
+html, body {
+  height: 100%;
+  margin:0;
+  padding:0;
+}
+
+.view {
+  height: 100%;
+}
+
+.map {
+  display: block;
+  position: absolute;
+  top:22px;
+  left:0;
+  right:0;
+  bottom:0;
+}
+
+.map-containter {
+  height:100%;
+  display: block;
+}
