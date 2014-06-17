@@ -1,11 +1,12 @@
 (function() {
 "use strict";
 
-angular.module('chGoogleMap.models').directive("circle",['$timeout', 'chCoordiante', function($timeout, chCoordiante){
+angular.module('chGoogleMap.models').directive("circle",['$timeout', 'chCoordiante', 'chCircle', function($timeout, chCoordiante, chCircle){
   return {
     restrict:'AE',
     scope: {
-      path:'=',
+      center:'=',
+      radius:'=',
       options:'=?',
       events:'=?',
     },
@@ -17,25 +18,36 @@ angular.module('chGoogleMap.models').directive("circle",['$timeout', 'chCoordian
       
     }],
     link: function($scope, element, attrs, mapController){
-      $scope.circle = new google.maps.Circle();
-      //$timeout so as to not freeze up the map
-      $timeout(function(){
-        $scope.circle.setMap(mapController.getMap());
-
-        if(angular.isObject($scope.events) ) {
-          angular.forEach($scope.events, function(fn,key){
-            if(angular.isFunction(fn)) {
-              google.maps.event.addListener($scope.circle, key, function(){ $scope.events[key].apply($scope, [$scope.circle, key, arguments]);});
-            }
-          });
-        };
-      });
+      $scope.circle = chCircle.fromAttrs($scope).$googleCircle(mapController.getMap(), $scope, $scope.events);
 
       element.on('$destroy', function(s) {
         $scope.circle.setMap(null);
         $scope.circle = null;
       });
 
+      $scope.$watch("center", function(newValue, oldValue){
+        if(!angular.isDefined(newValue)) return;
+        
+        $timeout(function(){
+          var newCoord = chCoordiante.fromAttr(newValue).$googleCoord();
+          if($scope.circle) $scope.circle.setCenter(newCoord);
+        });
+      });
+
+      $scope.$watch("radius", function(newValue, oldValue){
+        if(!angular.isDefined(newValue)) return;
+        
+        $timeout(function(){
+          if($scope.circle) $scope.circle.setRadius(newValue);
+        });
+      });
+
+      $scope.$watchCollection("options", function(newValue, oldValue){
+        if(angular.equals(newValue,oldValue)) return;
+        $timeout(function(){
+          $scope.circle.setOptions(newValue);
+        });
+      });
 
     },
   }

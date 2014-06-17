@@ -30,7 +30,8 @@ angular.module('chGoogleMap.models').directive("path",['$timeout', 'chCoordiante
       });
 
       element.on('$destroy', function(s) {
-        polygonController.getPolygon().setPath(null);
+        var polygon = polygonController.getPolygon();
+        if(polygon) polygon.setPath(null);
       });
     },
   }

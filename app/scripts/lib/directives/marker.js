@@ -1,7 +1,8 @@
 (function() {
 "use strict";
 
-angular.module('chGoogleMap.models').directive("marker",['$timeout', 'chCoordiante', function($timeout, chCoordiante){
+//use this if you have under 400 markers, 1000 is pushing it, 10,000 becomes unresponsive
+angular.module('chGoogleMap.models').directive("marker",['$timeout', 'chCoordiante', 'chMarker', function($timeout, chCoordiante, chMarker){
   return {
     restrict:'AE',
     scope: {
@@ -12,41 +13,50 @@ angular.module('chGoogleMap.models').directive("marker",['$timeout', 'chCoordian
     },
     require:'^map',
     link: function($scope, element, attrs, mapController){
-      $scope.marker = new google.maps.Marker();
-
-      //$timeout so as to not freeze up the map
-      $timeout(function(){
-        $scope.marker.setPosition(chCoordiante.fromAttr($scope.position).$googleCoord());
-        $scope.marker.setMap(mapController.getMap());
-
-        if(angular.isObject($scope.events) ) {
-          angular.forEach($scope.events, function(fn,key){
-            if(angular.isFunction(fn)) {
-              google.maps.event.addListener($scope.marker, key, function(){ $scope.events[key].apply($scope, [$scope.marker, key, arguments]);});
-            }
-          });
-        };
-      });
+      $scope.marker = chMarker.fromAttrs($scope).$googleMarker(mapController.getMap(), $scope, $scope.events);
 
       element.on('$destroy', function(s) {
         $scope.marker.setMap(null);
         $scope.marker = null;
       });
 
-      $scope.$watch("position", function(newValue, oldValue){
-        if(!angular.isDefined(newValue)) return;
-        
-        $timeout(function(){
-          var newCoord = chCoordiante.fromAttr(newValue).$googleCoord();
-          if($scope.marker) $scope.marker.setPosition(newCoord);
-        });
-      });
+      if($scope.$watchGroup) {
+        $scope.$watchGroup(["position", "icon"], function(newValue, oldValue){
+          $timeout(function(){
+            if(!$scope.marker) return;
 
-      $scope.$watch("icon", function(newValue, oldValue){
-        if(!angular.isDefined(newValue) && !angular.isDefined(oldValue)) return;
-        
+            if(angular.isDefined(newValue[0])){
+              var newCoord = chCoordiante.fromAttr(newValue[0]).$googleCoord();
+              $scope.marker.setPosition(newCoord);
+            }
+            $scope.marker.setIcon(newValue[1]);
+          });
+        });
+      } else {
+        $scope.$watch("icon", function(newValue, oldValue){
+          $timeout(function(){
+            if(!$scope.marker) return;
+            $scope.marker.setIcon(newValue);
+          });
+        });
+
+        $scope.$watch("position", function(newValue, oldValue){
+          $timeout(function(){
+            if(!$scope.marker) return;
+            
+            if(angular.isDefined(newValue)){
+              var newCoord = chCoordiante.fromAttr(newValue).$googleCoord();
+              $scope.marker.setPosition(newCoord);
+            }
+          });
+        });
+      }
+      
+
+      $scope.$watchCollection("options", function(newValue, oldValue){
+        if(angular.equals(newValue,oldValue)) return;
         $timeout(function(){
-          if($scope.marker) $scope.marker.setIcon(newValue);
+          $scope.marker.setOptions(newValue);
         });
       });
 

@@ -18,7 +18,7 @@ angular.module('chGoogleMap.models').directive("map",['$timeout', 'chCoordiante'
       center:'=',
       options:'=?',
       events:'=?',
-      bound:'=?',
+      bounds:'=?',
       dragging:'=?', //boolean becomes true when dragstart and false when dragend
     },
     controller: ['$scope', function($scope){
@@ -33,15 +33,14 @@ angular.module('chGoogleMap.models').directive("map",['$timeout', 'chCoordiante'
     link: function($scope, element, attrs){
       var $element = angular.element(element);
       var opts = {
-        options:{},
         center:chCoordiante.fromAttr($scope.center).$googleCoord(),
         zoom:$scope.zoom,
         draggable: $isTrue(attrs.draggable),
       };
-      if(angular.isString(attrs.type)) {
-        opts.mapTypeId = google.maps.MapTypeId[angular.uppercase(attrs.type)];
-      }
-      $scope.map = new google.maps.Map($element.find('div')[0], angular.extend(DEFAULTS, opts));
+
+      if(angular.isDefined(attrs.type)) opts.mapTypeId = google.maps.MapTypeId[attrs.type.toUpperCase()];
+
+      $scope.map = new google.maps.Map($element.find('div')[0], angular.extend(DEFAULTS, $scope.options, opts));
 
       var dragging;
       google.maps.event.addListener($scope.map, "dragstart", function(){
@@ -126,16 +125,29 @@ angular.module('chGoogleMap.models').directive("map",['$timeout', 'chCoordiante'
           if(!angular.equals(newValue, $scope.map.zoom)) $scope.map.setZoom(newValue);
         });
       });
-      // $scope.$watchCollection("bounds", function(newValue, oldValue){
-      //   if(angular.equals(newValue,oldValue)) return;
-      //   $timeout(function(){
-      //     // $scope.map.setZoom(newValue);
-      //   });
-      // });
+      $scope.$watchCollection("bounds", function(newValue, oldValue){
+        if(!angular.isDefined(newValue) || dragging || !angular.isDefined(newValue.northeast) || !angular.isDefined(newValue.southwest)) return;
+        
+        $timeout(function(){
+          var neCoordinate = chCoordiante.fromAttr(newValue.northeast);
+          var swCoordinate = chCoordiante.fromAttr(newValue.southwest);
+          if(!neCoordinate || !swCoordinate) return;
+
+          var realBounds = $scope.map.getBounds();
+          if(realBounds.getNorthEast().equals(neCoordinate.$googleCoord())) return;
+          if(realBounds.getSouthWest().equals(swCoordinate.$googleCoord())) return;
+
+          settingCenterFromScope = true;
+          var googleBound = new google.maps.LatLngBounds(swCoordinate.$googleCoord(), neCoordinate.$googleCoord());
+          if($isTrue(attrs.pan) && $scope.zoom == $scope.map.zoom) $scope.map.panToBounds(googleBound);
+          else $scope.map.fitBounds(googleBound);
+          settingCenterFromScope = false;
+        });
+      });
       $scope.$watchCollection("options", function(newValue, oldValue){
         if(angular.equals(newValue,oldValue)) return;
         $timeout(function(){
-          // $scope.map.setZoom(newValue);
+          $scope.map.setOptions(newValue);
         });
       });
     },
