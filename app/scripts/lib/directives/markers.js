@@ -4,7 +4,7 @@
 //use this instead of 'marker'
 angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordiante', 'chMarker', function($timeout, chCoordiante, chMarker){
   return {
-    restrict:'AE',
+    restrict:'E',
     scope: {
       data:'=',
       events:'=?',
@@ -30,7 +30,7 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
           }
 
           var markers = {};
-          var bounds;
+          var bounds = null;
           if($scope.fit) bounds = new google.maps.LatLngBounds();
 
 
@@ -56,7 +56,10 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
 
           $scope.markers = markers;
 
-          if(bounds && !bounds.isEmpty()) mapController.getMap().fitBounds(bounds);
+          if(bounds && !bounds.isEmpty()) {
+            mapController.getMap().fitBounds(bounds);
+            $scope.fit = false;
+          }
 
         });
       });

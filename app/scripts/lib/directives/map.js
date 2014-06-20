@@ -45,56 +45,66 @@ angular.module('chGoogleMap.models').directive("map",['$timeout', 'chCoordiante'
       var dragging;
       google.maps.event.addListener($scope.map, "dragstart", function(){
         dragging = true;
-        $scope.$evalAsync(function(s){
-          if(dragging) s.dragging = dragging;
+        $timeout(function(){
+          if(dragging) $scope.dragging = dragging;
         });
       });
       google.maps.event.addListener($scope.map, "dragend", function(){
         dragging = false;
-        $scope.$evalAsync(function($scope){
+        $timeout(function(){
           if(!dragging) $scope.dragging = dragging;
         });
       });
-      google.maps.event.addListener($scope.map, "drag", function(){
-        var center = $scope.map.center;
-        $scope.$evalAsync(function($scope){
-          if(angular.isDefined($scope.center) && angular.isDefined($scope.center.latitude) && angular.isDefined($scope.center.longitude)) {
-            $scope.center.latitude = center.lat();
-            $scope.center.longitude = center.lng();
-          };
-        });
-      });
+
+      //this causes weird jumps when you drag the map, not sure how to fix it
+      // google.maps.event.addListener($scope.map, "drag", function(){
+      //   $timeout(function(){
+      //     var center = $scope.map.center;
+      //     if(angular.isDefined($scope.center) && angular.isDefined($scope.center.latitude) && angular.isDefined($scope.center.longitude)) {
+      //       $scope.center.latitude = center.lat();
+      //       $scope.center.longitude = center.lng();
+      //     };
+      //   });
+      // });
+
       google.maps.event.addListener($scope.map, "zoom_changed", function(){
-        $scope.$evalAsync(function($scope){
+        $timeout.cancel($scope.zoomChangedPromise);
+        $scope.zoomChangedPromise = $timeout(function(){
+          // console.log('zoom_changed ' + $scope.map.zoom);
           $scope.zoom = $scope.map.zoom;
         });
       });
       
       var settingCenterFromScope = false;
       google.maps.event.addListener($scope.map, "center_changed", function(){
-        var center = $scope.map.center;
         if(settingCenterFromScope) return;
         
-        $scope.$evalAsync(function($scope){
+        $timeout.cancel($scope.centerChangedPromise);
+        $scope.centerChangedPromise = $timeout(function(){
+          // console.log('center_changed <' + $scope.map.center.lat() + ", " + $scope.map.center.lat() + ">");
+          var center = $scope.map.center;
           if(angular.isDefined($scope.center) && angular.isDefined($scope.center.latitude) && angular.isDefined($scope.center.longitude)) {
             if($scope.center.latitude != center.lat()) $scope.center.latitude = center.lat();
             if($scope.center.longitude != center.lng()) $scope.center.longitude = center.lng();
           }
-        });
+        }, 400);
 
       });
       google.maps.event.addListener($scope.map, "idle", function(){
-        var bounds = $scope.map.getBounds();
-        var ne = bounds.getNorthEast();
-        var sw = bounds.getSouthWest();
-        $scope.$evalAsync(function($scope){
+        $timeout.cancel($scope.idlePromise);
+        $scope.idlePromise = $timeout(function(){
+          // console.log('idling');
           if(angular.isDefined($scope.bounds)) {
+            var bounds = $scope.map.getBounds();
+            var ne = bounds.getNorthEast();
+            var sw = bounds.getSouthWest();
             $scope.bounds.northeast = {latitude: ne.lat(), longitude: ne.lng()};
             $scope.bounds.southwest = {latitude: sw.lat(), longitude: sw.lng()};
           }
         });
       });
 
+      //add map events
       if(angular.isObject($scope.events) ) {
         angular.forEach($scope.events, function(fn,key){
           if(angular.isFunction(fn)) {
@@ -108,10 +118,12 @@ angular.module('chGoogleMap.models').directive("map",['$timeout', 'chCoordiante'
       $scope.$watchCollection("center", function(newValue, oldValue){
         if(!angular.isDefined(newValue) || dragging) return;
         
-        $timeout(function(){
+        $timeout.cancel($scope.centerWatchPromise);
+        $scope.centerWatchPromise = $timeout(function(){
           var newCoordinate = chCoordiante.fromAttr(newValue);
           if(newCoordinate.$googleCoord().equals($scope.map.center)) return;
 
+          // console.log('watching center ' + newCoordinate + " from: <" + $scope.map.center.lat() + ", " + $scope.map.center.lat() + ">");
           settingCenterFromScope = true;
           if($isTrue(attrs.pan) && $scope.zoom == $scope.map.zoom) $scope.map.panTo(newCoordinate.$googleCoord());
           else $scope.map.setCenter(newCoordinate.$googleCoord());
@@ -121,14 +133,19 @@ angular.module('chGoogleMap.models').directive("map",['$timeout', 'chCoordiante'
       $scope.$watch("zoom", function(newValue, oldValue){
         if(!angular.isDefined(newValue)) return;
         
-        $timeout(function(){
-          if(!angular.equals(newValue, $scope.map.zoom)) $scope.map.setZoom(newValue);
+        $timeout.cancel($scope.zoomWatchPromise);
+        $scope.zoomWatchPromise = $timeout(function(){
+          if(!angular.equals(newValue, $scope.map.zoom)) {
+            // console.log('watching zoom ' + newValue + " from: " + oldValue);
+            $scope.map.setZoom(newValue);
+          }
         });
       });
       $scope.$watchCollection("bounds", function(newValue, oldValue){
         if(!angular.isDefined(newValue) || dragging || !angular.isDefined(newValue.northeast) || !angular.isDefined(newValue.southwest)) return;
         
-        $timeout(function(){
+        $timeout.cancel($scope.boundsWatchPromise);
+        $scope.boundsWatchPromise = $timeout(function(){
           var neCoordinate = chCoordiante.fromAttr(newValue.northeast);
           var swCoordinate = chCoordiante.fromAttr(newValue.southwest);
           if(!neCoordinate || !swCoordinate) return;
@@ -138,6 +155,7 @@ angular.module('chGoogleMap.models').directive("map",['$timeout', 'chCoordiante'
           if(realBounds.getSouthWest().equals(swCoordinate.$googleCoord())) return;
 
           settingCenterFromScope = true;
+          // console.log('watching bounds');
           var googleBound = new google.maps.LatLngBounds(swCoordinate.$googleCoord(), neCoordinate.$googleCoord());
           if($isTrue(attrs.pan) && $scope.zoom == $scope.map.zoom) $scope.map.panToBounds(googleBound);
           else $scope.map.fitBounds(googleBound);

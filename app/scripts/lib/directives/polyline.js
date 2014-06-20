@@ -3,7 +3,7 @@
 
 var $isTrue =  function(value){ return ['true', 'TRUE', 1, 'y', 'Y', 'yes', 'YES'].indexOf(value) !== -1;}
 
-angular.module('chGoogleMap.models').directive("polygon",['$timeout', 'chPolygon', function($timeout, chPolygon){
+angular.module('chGoogleMap.models').directive("polyline",['$timeout', 'chPolyline', function($timeout, chPolyline){
   return {
     restrict:'AE',
     scope: {
@@ -13,26 +13,26 @@ angular.module('chGoogleMap.models').directive("polygon",['$timeout', 'chPolygon
     require:'^map',
     controller: ['$scope', function($scope){
       return {
-        getPolygon: function(){return $scope.polygon;}
+        getPolyline: function(){return $scope.polyline;}
       };
       
     }],
     link: function($scope, element, attrs, mapController){
-      var a = chPolygon.fromAttrs($scope);
-      $scope.polygon = a.$googlePolygon(mapController.getMap(), $scope, $scope.events);
+      var a = chPolyline.fromAttrs($scope);
+      $scope.polyline = a.$googlePolyline(mapController.getMap(), $scope, $scope.events);
 
-      $scope.polygon.setEditable($isTrue(attrs.editable));
-      $scope.polygon.setVisible(angular.isDefined(attrs.visible)?$isTrue(attrs.visible):true);
+      $scope.polyline.setEditable($isTrue(attrs.editable));
+      $scope.polyline.setVisible(angular.isDefined(attrs.visible)?$isTrue(attrs.visible):true);
 
       element.on('$destroy', function(s) {
-        $scope.polygon.setMap(null);
-        $scope.polygon = null;
+        $scope.polyline.setMap(null);
+        $scope.polyline = null;
       });
 
       $scope.$watchCollection("options", function(newValue, oldValue){
         if(angular.equals(newValue,oldValue)) return;
         $timeout(function(){
-          $scope.polygon.setOptions(newValue);
+          $scope.polyline.setOptions(newValue);
         });
       });
 

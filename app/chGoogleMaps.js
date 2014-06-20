@@ -183,6 +183,140 @@ angular.module('chGoogleMap.models')
 (function() {
 "use strict";
 
+function $getProperty( propertyName, object ) {
+  var parts = propertyName.split( "." );
+  var length = parts.length;
+  var i;
+  var property = object || this;
+ 
+  for ( i = 0; i < length; i++ ) {
+    property = property[parts[i]];
+  }
+ 
+  return property;
+}
+
+angular.module('chGoogleMap.models')
+.factory('chPolygon', ['$timeout', 'chCoordiante', function($timeout, chCoordiante){
+  function chPolygon(){};
+
+  chPolygon.fromAttrs = function(item) {
+    var polygon = new chPolygon();
+    polygon.options = item.options;
+    return polygon;
+  }
+
+  chPolygon.fromItemAndAttr = function(item, keys) {
+    var polygon = new chPolygon();
+
+    if(angular.isDefined(keys.options) && keys.options == 'self') polygon.options = item;
+    else if(angular.isDefined(keys.options)) polygon.options = $getProperty(keys.options, item);
+
+    if(angular.isDefined(keys.path)) {
+      polygon.path = [];
+      angular.forEach($getProperty(keys.path, item), function(item, i){
+        polygon.path.push(chCoordiante.fromAttr(item).$googleCoord());
+      });
+    } 
+
+    return polygon;
+  };
+
+  chPolygon.prototype = {
+    $googlePolygon: function(map, scope, events){
+      var polygon = new google.maps.Polygon();
+      polygon.setMap(map);
+      polygon.setOptions(this.options);
+
+      if(this.path) polygon.setPath(this.path);
+
+      var _this = this;
+      angular.forEach(events, function(fn,key){
+        if(angular.isFunction(fn)) {
+          google.maps.event.addListener(polygon, key, function(){ events[key].apply(scope, [_this, key, arguments]);});
+        }
+      });
+
+      return polygon;
+    },
+    toString: function(){return this.position;},
+  };
+
+  return chPolygon;
+}])
+
+
+})();
+(function() {
+"use strict";
+
+function $getProperty( propertyName, object ) {
+  var parts = propertyName.split( "." );
+  var length = parts.length;
+  var i;
+  var property = object || this;
+ 
+  for ( i = 0; i < length; i++ ) {
+    property = property[parts[i]];
+  }
+ 
+  return property;
+}
+
+angular.module('chGoogleMap.models')
+.factory('chPolyline', ['$timeout', 'chCoordiante', function($timeout, chCoordiante){
+  function chPolyline(){};
+
+  chPolyline.fromAttrs = function(item) {
+    var polyline = new chPolyline();
+    polyline.options = item.options;
+    return polyline;
+  }
+
+  chPolyline.fromItemAndAttr = function(item, keys) {
+    var polyline = new chPolyline();
+
+    if(angular.isDefined(keys.options) && keys.options == 'self') polyline.options = item;
+    else if(angular.isDefined(keys.options)) polyline.options = $getProperty(keys.options, item);
+
+    if(angular.isDefined(keys.path)) {
+      polyline.path = [];
+      angular.forEach($getProperty(keys.path, item), function(item, i){
+        polyline.path.push(chCoordiante.fromAttr(item).$googleCoord());
+      });
+    } 
+
+    return polyline;
+  };
+
+  chPolyline.prototype = {
+    $googlePolyline: function(map, scope, events){
+      var polyline = new google.maps.Polyline();
+      polyline.setMap(map);
+      polyline.setOptions(this.options);
+
+      if(this.path) polyline.setPath(this.path);
+
+      var _this = this;
+      angular.forEach(events, function(fn,key){
+        if(angular.isFunction(fn)) {
+          google.maps.event.addListener(polyline, key, function(){ events[key].apply(scope, [_this, key, arguments]);});
+        }
+      });
+
+      return polyline;
+    },
+    toString: function(){return this.position;},
+  };
+
+  return chPolyline;
+}])
+
+
+})();
+(function() {
+"use strict";
+
 angular.module('chGoogleMap.models').directive("circle",['$timeout', 'chCoordiante', 'chCircle', function($timeout, chCoordiante, chCircle){
   return {
     restrict:'AE',
@@ -345,56 +479,66 @@ angular.module('chGoogleMap.models').directive("map",['$timeout', 'chCoordiante'
       var dragging;
       google.maps.event.addListener($scope.map, "dragstart", function(){
         dragging = true;
-        $scope.$evalAsync(function(s){
-          if(dragging) s.dragging = dragging;
+        $timeout(function(){
+          if(dragging) $scope.dragging = dragging;
         });
       });
       google.maps.event.addListener($scope.map, "dragend", function(){
         dragging = false;
-        $scope.$evalAsync(function($scope){
+        $timeout(function(){
           if(!dragging) $scope.dragging = dragging;
         });
       });
-      google.maps.event.addListener($scope.map, "drag", function(){
-        var center = $scope.map.center;
-        $scope.$evalAsync(function($scope){
-          if(angular.isDefined($scope.center) && angular.isDefined($scope.center.latitude) && angular.isDefined($scope.center.longitude)) {
-            $scope.center.latitude = center.lat();
-            $scope.center.longitude = center.lng();
-          };
-        });
-      });
+
+      //this causes weird jumps when you drag the map, not sure how to fix it
+      // google.maps.event.addListener($scope.map, "drag", function(){
+      //   $timeout(function(){
+      //     var center = $scope.map.center;
+      //     if(angular.isDefined($scope.center) && angular.isDefined($scope.center.latitude) && angular.isDefined($scope.center.longitude)) {
+      //       $scope.center.latitude = center.lat();
+      //       $scope.center.longitude = center.lng();
+      //     };
+      //   });
+      // });
+
       google.maps.event.addListener($scope.map, "zoom_changed", function(){
-        $scope.$evalAsync(function($scope){
+        $timeout.cancel($scope.zoomChangedPromise);
+        $scope.zoomChangedPromise = $timeout(function(){
+          // console.log('zoom_changed ' + $scope.map.zoom);
           $scope.zoom = $scope.map.zoom;
         });
       });
       
       var settingCenterFromScope = false;
       google.maps.event.addListener($scope.map, "center_changed", function(){
-        var center = $scope.map.center;
         if(settingCenterFromScope) return;
         
-        $scope.$evalAsync(function($scope){
+        $timeout.cancel($scope.centerChangedPromise);
+        $scope.centerChangedPromise = $timeout(function(){
+          // console.log('center_changed <' + $scope.map.center.lat() + ", " + $scope.map.center.lat() + ">");
+          var center = $scope.map.center;
           if(angular.isDefined($scope.center) && angular.isDefined($scope.center.latitude) && angular.isDefined($scope.center.longitude)) {
             if($scope.center.latitude != center.lat()) $scope.center.latitude = center.lat();
             if($scope.center.longitude != center.lng()) $scope.center.longitude = center.lng();
           }
-        });
+        }, 400);
 
       });
       google.maps.event.addListener($scope.map, "idle", function(){
-        var bounds = $scope.map.getBounds();
-        var ne = bounds.getNorthEast();
-        var sw = bounds.getSouthWest();
-        $scope.$evalAsync(function($scope){
+        $timeout.cancel($scope.idlePromise);
+        $scope.idlePromise = $timeout(function(){
+          // console.log('idling');
           if(angular.isDefined($scope.bounds)) {
+            var bounds = $scope.map.getBounds();
+            var ne = bounds.getNorthEast();
+            var sw = bounds.getSouthWest();
             $scope.bounds.northeast = {latitude: ne.lat(), longitude: ne.lng()};
             $scope.bounds.southwest = {latitude: sw.lat(), longitude: sw.lng()};
           }
         });
       });
 
+      //add map events
       if(angular.isObject($scope.events) ) {
         angular.forEach($scope.events, function(fn,key){
           if(angular.isFunction(fn)) {
@@ -408,10 +552,12 @@ angular.module('chGoogleMap.models').directive("map",['$timeout', 'chCoordiante'
       $scope.$watchCollection("center", function(newValue, oldValue){
         if(!angular.isDefined(newValue) || dragging) return;
         
-        $timeout(function(){
+        $timeout.cancel($scope.centerWatchPromise);
+        $scope.centerWatchPromise = $timeout(function(){
           var newCoordinate = chCoordiante.fromAttr(newValue);
           if(newCoordinate.$googleCoord().equals($scope.map.center)) return;
 
+          // console.log('watching center ' + newCoordinate + " from: <" + $scope.map.center.lat() + ", " + $scope.map.center.lat() + ">");
           settingCenterFromScope = true;
           if($isTrue(attrs.pan) && $scope.zoom == $scope.map.zoom) $scope.map.panTo(newCoordinate.$googleCoord());
           else $scope.map.setCenter(newCoordinate.$googleCoord());
@@ -421,14 +567,19 @@ angular.module('chGoogleMap.models').directive("map",['$timeout', 'chCoordiante'
       $scope.$watch("zoom", function(newValue, oldValue){
         if(!angular.isDefined(newValue)) return;
         
-        $timeout(function(){
-          if(!angular.equals(newValue, $scope.map.zoom)) $scope.map.setZoom(newValue);
+        $timeout.cancel($scope.zoomWatchPromise);
+        $scope.zoomWatchPromise = $timeout(function(){
+          if(!angular.equals(newValue, $scope.map.zoom)) {
+            // console.log('watching zoom ' + newValue + " from: " + oldValue);
+            $scope.map.setZoom(newValue);
+          }
         });
       });
       $scope.$watchCollection("bounds", function(newValue, oldValue){
         if(!angular.isDefined(newValue) || dragging || !angular.isDefined(newValue.northeast) || !angular.isDefined(newValue.southwest)) return;
         
-        $timeout(function(){
+        $timeout.cancel($scope.boundsWatchPromise);
+        $scope.boundsWatchPromise = $timeout(function(){
           var neCoordinate = chCoordiante.fromAttr(newValue.northeast);
           var swCoordinate = chCoordiante.fromAttr(newValue.southwest);
           if(!neCoordinate || !swCoordinate) return;
@@ -438,6 +589,7 @@ angular.module('chGoogleMap.models').directive("map",['$timeout', 'chCoordiante'
           if(realBounds.getSouthWest().equals(swCoordinate.$googleCoord())) return;
 
           settingCenterFromScope = true;
+          // console.log('watching bounds');
           var googleBound = new google.maps.LatLngBounds(swCoordinate.$googleCoord(), neCoordinate.$googleCoord());
           if($isTrue(attrs.pan) && $scope.zoom == $scope.map.zoom) $scope.map.panToBounds(googleBound);
           else $scope.map.fitBounds(googleBound);
@@ -528,7 +680,7 @@ angular.module('chGoogleMap.models').directive("marker",['$timeout', 'chCoordian
 //use this instead of 'marker'
 angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordiante', 'chMarker', function($timeout, chCoordiante, chMarker){
   return {
-    restrict:'AE',
+    restrict:'E',
     scope: {
       data:'=',
       events:'=?',
@@ -554,7 +706,7 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
           }
 
           var markers = {};
-          var bounds;
+          var bounds = null;
           if($scope.fit) bounds = new google.maps.LatLngBounds();
 
 
@@ -580,7 +732,10 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
 
           $scope.markers = markers;
 
-          if(bounds && !bounds.isEmpty()) mapController.getMap().fitBounds(bounds);
+          if(bounds && !bounds.isEmpty()) {
+            mapController.getMap().fitBounds(bounds);
+            $scope.fit = false;
+          }
 
         });
       });
@@ -595,35 +750,43 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
 
 angular.module('chGoogleMap.models').directive("path",['$timeout', 'chCoordiante', function($timeout, chCoordiante){
   return {
-    restrict:'AE',
+    restrict:'E',
     scope: {
       coordinates:'=',
       events:'=?',
     },
-    require: '^polygon',
-    link: function($scope, element, attrs, polygonController){
+    require: ['?^polygon', '?^polyline'],
+    link: function($scope, element, attrs, controllers){
       $timeout(function(){
         if(angular.isArray($scope.coordinates)) {
           var coordinates = [];
           angular.forEach($scope.coordinates, function(coordinate, i){
             coordinates.push(chCoordiante.fromAttr(coordinate).$googleCoord());
           });
-          polygonController.getPolygon().setPath(coordinates);
+          if(angular.isDefined(controllers[0])) controllers[0].getPolygon().setPath(coordinates);
+          else if(angular.isDefined(controllers[1])) controllers[1].getPolyline().setPath(coordinates);
         }
 
-        var path = polygonController.getPolygon().getPath();
-        if(angular.isObject($scope.events) ) {
+        var path;
+        if(angular.isDefined(controllers[0])) path = controllers[0].getPolygon().getPath();
+        else if(angular.isDefined(controllers[1])) path = controllers[1].getPolyline().getPath();
+        if(angular.isObject($scope.events) && path) {
           angular.forEach($scope.events, function(fn,key){
             if(angular.isFunction(fn)) {
-              google.maps.event.addListener(path, key, function(){ $scope.events[key].apply($scope, [polygonController.getPolygon(), key, arguments]);});
+              var objectToSend = null;
+              if(angular.isDefined(controllers[0])) objectToSend = controllers[0].getPolygon();
+              else if(angular.isDefined(controllers[1])) objectToSend = controllers[1].getPolyline();
+              google.maps.event.addListener(path, key, function(){ $scope.events[key].apply($scope, [objectToSend, key, arguments]);});
             }
           });
         };
       });
 
       element.on('$destroy', function(s) {
-        var polygon = polygonController.getPolygon();
-        if(polygon) polygon.setPath(null);
+        var obj = null;
+        if(angular.isDefined(controllers[0])) obj = controllers[0].getPolygon();
+        else if(angular.isDefined(controllers[1])) obj = controllers[1].getPolyline();
+        if(obj) obj.setPath(null);
       });
     },
   }
@@ -636,7 +799,7 @@ angular.module('chGoogleMap.models').directive("path",['$timeout', 'chCoordiante
 
 var $isTrue =  function(value){ return ['true', 'TRUE', 1, 'y', 'Y', 'yes', 'YES'].indexOf(value) !== -1;}
 
-angular.module('chGoogleMap.models').directive("polygon",['$timeout', 'chCoordiante', function($timeout, chCoordiante){
+angular.module('chGoogleMap.models').directive("polygon",['$timeout', 'chPolygon', function($timeout, chPolygon){
   return {
     restrict:'AE',
     scope: {
@@ -651,25 +814,11 @@ angular.module('chGoogleMap.models').directive("polygon",['$timeout', 'chCoordia
       
     }],
     link: function($scope, element, attrs, mapController){
-      $scope.polygon = new google.maps.Polygon();
-      $scope.polygon.setOptions(angular.extend({}, $scope.options));
+      var a = chPolygon.fromAttrs($scope);
+      $scope.polygon = a.$googlePolygon(mapController.getMap(), $scope, $scope.events);
 
       $scope.polygon.setEditable($isTrue(attrs.editable));
       $scope.polygon.setVisible(angular.isDefined(attrs.visible)?$isTrue(attrs.visible):true);
-      
-
-      //$timeout so as to not freeze up the map
-      $timeout(function(){
-        $scope.polygon.setMap(mapController.getMap());
-
-        if(angular.isObject($scope.events) ) {
-          angular.forEach($scope.events, function(fn,key){
-            if(angular.isFunction(fn)) {
-              google.maps.event.addListener($scope.polygon, key, function(){ $scope.events[key].apply($scope, [$scope, key, arguments]);});
-            }
-          });
-        };
-      });
 
       element.on('$destroy', function(s) {
         $scope.polygon.setMap(null);
@@ -680,6 +829,120 @@ angular.module('chGoogleMap.models').directive("polygon",['$timeout', 'chCoordia
         if(angular.equals(newValue,oldValue)) return;
         $timeout(function(){
           $scope.polygon.setOptions(newValue);
+        });
+      });
+
+    },
+  }
+}])
+
+})();
+(function() {
+"use strict";
+
+var $isTrue =  function(value){ return ['true', 'TRUE', 1, 'y', 'Y', 'yes', 'YES'].indexOf(value) !== -1;}
+
+angular.module('chGoogleMap.models').directive("polygons",['$timeout', 'chCoordiante', 'chPolygon', function($timeout, chCoordiante, chPolygon){
+  return {
+    restrict:'E',
+    scope: {
+      data:'=?',
+      path:'=',
+      options:'=?',
+      events:'=?',
+      pathEvents:'=?',
+    },
+    require:'^map',
+    link: function($scope, element, attrs, mapController){
+      $scope.polygons = {};
+
+      element.on('$destroy', function(s) {
+        angular.forEach($scope.polygons, function(polygon, key){
+          polygon.setMap(null);
+        });
+        $scope.polygons = {};
+      });
+
+      $scope.$watch("data", function(newValue, oldValue){
+        $timeout(function(){
+          //remove all old ones
+          if(!angular.isDefined(newValue) || !angular.isArray(newValue) || newValue.length == 0) {
+            angular.forEach($scope.polygons, function(polygon, key){polygon.setMap(null);});
+            $scope.polygons = {};
+          }
+
+          var polygons = {};
+          var bounds;
+          if($scope.fit) bounds = new google.maps.LatLngBounds();
+
+
+          angular.forEach(newValue, function(item, i){
+            var key;
+            if(angular.isDefined(attrs.trackBy)) key = item[attrs.trackBy];
+            else key = i;
+
+            if(angular.isDefined($scope.polygons[key])){
+              polygons[key] = $scope.polygons[key];
+            } else {
+              if(angular.isDefined(polygons[key])) throw "track by not unique";
+              polygons[key] = chPolygon.fromItemAndAttr(item, attrs).$googlePolygon(mapController.getMap(), $scope, $scope.events);
+
+              // if(bounds) bounds.extend(polygons[key].getPosition());
+            }
+          });
+
+          //remove polygons that are no longer in data
+          angular.forEach($scope.polygons, function(value, key){
+            if(!angular.isDefined(polygons[key])) value.setMap(null);
+          });
+
+          $scope.polygons = polygons;
+
+          if(bounds && !bounds.isEmpty()) mapController.getMap().fitBounds(bounds);
+
+        });
+      });
+
+    },
+  }
+}])
+
+})();
+(function() {
+"use strict";
+
+var $isTrue =  function(value){ return ['true', 'TRUE', 1, 'y', 'Y', 'yes', 'YES'].indexOf(value) !== -1;}
+
+angular.module('chGoogleMap.models').directive("polyline",['$timeout', 'chPolyline', function($timeout, chPolyline){
+  return {
+    restrict:'AE',
+    scope: {
+      options:'=?',
+      events:'=?',
+    },
+    require:'^map',
+    controller: ['$scope', function($scope){
+      return {
+        getPolyline: function(){return $scope.polyline;}
+      };
+      
+    }],
+    link: function($scope, element, attrs, mapController){
+      var a = chPolyline.fromAttrs($scope);
+      $scope.polyline = a.$googlePolyline(mapController.getMap(), $scope, $scope.events);
+
+      $scope.polyline.setEditable($isTrue(attrs.editable));
+      $scope.polyline.setVisible(angular.isDefined(attrs.visible)?$isTrue(attrs.visible):true);
+
+      element.on('$destroy', function(s) {
+        $scope.polyline.setMap(null);
+        $scope.polyline = null;
+      });
+
+      $scope.$watchCollection("options", function(newValue, oldValue){
+        if(angular.equals(newValue,oldValue)) return;
+        $timeout(function(){
+          $scope.polyline.setOptions(newValue);
         });
       });
 
