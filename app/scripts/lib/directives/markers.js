@@ -40,7 +40,8 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
             else key = i;
 
             if(angular.isDefined($scope.markers[key])){
-              markers[key] = $scope.markers[key];
+              var googleMarker = $scope.markers[key];
+              markers[key] = chMarker.updateGoogleMapMarker(googleMarker, item, attrs);
             } else {
               if(angular.isDefined(markers[key])) throw "track by not unique";
               markers[key] = chMarker.fromItemAndAttr(item, attrs).$googleMarker(mapController.getMap(), $scope, $scope.events);

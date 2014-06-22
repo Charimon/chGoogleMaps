@@ -47,6 +47,18 @@ angular.module('chGoogleMap.models')
 
     return marker;
   };
+  chMarker.updateGoogleMapMarker = function(googleMapMarker, item, keys) {
+    if(angular.isDefined(keys.position) && keys.position == 'self') googleMapMarker.setPosition(chCoordiante.fromAttr(item).$googleCoord());
+    else if(angular.isDefined(keys.position)) googleMapMarker.setPosition(chCoordiante.fromAttr($getProperty(keys.position, item)).$googleCoord());
+
+    if(angular.isDefined(keys.icon) && keys.icon == 'self') googleMapMarker.setIcon(item);
+    else if(angular.isDefined(keys.icon)) googleMapMarker.setIcon($getProperty(keys.icon, item));
+
+    if(angular.isDefined(keys.options) && keys.options == 'self') googleMapMarker.setOptions(item);
+    else if(angular.isDefined(keys.options)) googleMapMarker.setOptions($getProperty(keys.options, item));
+
+    return googleMapMarker;
+  }
 
   chMarker.prototype = {
     $googleMarker: function(map, scope, events){
