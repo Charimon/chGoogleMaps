@@ -8,7 +8,7 @@
 <map type='terrain' center="map.center" zoom="map.zoom" bounds="map.bounds" draggable="true" pan="true" events="map.events">
   <!-- <marker ng-repeat="marker in markers track by marker.id" position="marker" icon="marker.icon" events='map.markerEvents'></marker> -->
   
-  <markers data="markers" track-by="id" position="self" icon="icon" events='map.markerEvents' fit="true"></markers>
+  <markers data="markers" track-by="id" position="self" icon="icon" events='map.markerEvents' fit="true" label-text="name"></markers>
 
   <polygon ng-repeat="polygon in polygons track by polygon.id" options="polygon.options" events='map.polygonEvents'>
     <path coordinates="polygon.path"></path>

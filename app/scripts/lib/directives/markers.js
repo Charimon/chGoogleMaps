@@ -16,6 +16,7 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
 
       element.on('$destroy', function(s) {
         angular.forEach($scope.markers, function(marker, key){
+          if(marker.$label) marker.$label.set('map', null);
           marker.setMap(null);
         });
         $scope.markers = {};
@@ -25,7 +26,10 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
         $timeout(function(){
           //remove all old ones
           if(!angular.isDefined(newValue) || !angular.isArray(newValue) || newValue.length == 0) {
-            angular.forEach($scope.markers, function(marker, key){marker.setMap(null);});
+            angular.forEach($scope.markers, function(marker, key){
+              if(marker.$label) marker.$label.set('map', null);
+              marker.setMap(null);
+            });
             $scope.markers = {};
           }
 
@@ -52,7 +56,10 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
 
           //remove markers that are no longer in data
           angular.forEach($scope.markers, function(value, key){
-            if(!angular.isDefined(markers[key])) value.setMap(null);
+            if(!angular.isDefined(markers[key])){
+              if(value.$label) value.$label.set('map', null);
+              value.setMap(null);
+            }
           });
 
           $scope.markers = markers;

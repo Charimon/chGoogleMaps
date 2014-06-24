@@ -16,6 +16,7 @@ angular.module('chGoogleMap.models').directive("marker",['$timeout', 'chCoordian
       $scope.marker = chMarker.fromAttrs($scope).$googleMarker(mapController.getMap(), $scope, $scope.events);
 
       element.on('$destroy', function(s) {
+        if($scope.marer.$label) $scope.marer.$label.set('map', null);
         $scope.marker.setMap(null);
         $scope.marker = null;
       });

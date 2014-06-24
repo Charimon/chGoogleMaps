@@ -27,7 +27,7 @@ module.exports = function (grunt) {
 
     concat: {
       dist: {
-        src: ['app/scripts/lib/module.js', 'app/scripts/lib/models/**/*.js', 'app/scripts/lib/directives/**/*.js'],
+        src: ['app/scripts/lib/mapLabel.js', 'app/scripts/lib/module.js', 'app/scripts/lib/models/**/*.js', 'app/scripts/lib/directives/**/*.js'],
         dest: 'app/chGoogleMaps.js'
       }   
     },

@@ -57,7 +57,7 @@ angular.module('chGoogleMapsApp')
         for(var i=0; i<10; i++) {
           var lat = Math.random() * 180 - 90
           var lng = Math.random() * 360 - 180
-          markers.push({latitude:lat, longitude:lng, id:i});
+          markers.push({latitude:lat, longitude:lng, id:i, name:"name"+i});
         }
         $scope.markers = markers;
       } else {
@@ -65,7 +65,7 @@ angular.module('chGoogleMapsApp')
         for(var i=0; i<10; i++) {
           var lat = Math.random() * 180 - 90
           var lng = Math.random() * 360 - 180
-          markers.push({latitude:lat, longitude:lng, id:i, icon:{ anchor:{x:4,y:4},url:"/images/circle.png" }});
+          markers.push({latitude:lat, longitude:lng, id:i, name:"name"+i, icon:{ anchor:{x:4,y:4},url:"/images/circle.png"}});
         }
         $scope.markers = markers;
       }

@@ -15,7 +15,7 @@ function $getProperty( propertyName, object ) {
 }
 
 angular.module('chGoogleMap.models')
-.factory('chMarker', ['$timeout', 'chCoordiante', function($timeout, chCoordiante){
+.factory('chMarker', ['$timeout', 'chCoordiante', 'chLabel', function($timeout, chCoordiante, chLabel){
   function chMarker(){};
 
   chMarker.fromAttrs = function(item) {
@@ -25,6 +25,7 @@ angular.module('chGoogleMap.models')
     var marker = new chMarker();
     marker.position = position;
     marker.icon = item.icon;
+    marker.label = chLabel.fromAttrs(item);
     marker.options = item.options;
 
     return marker;
@@ -42,8 +43,13 @@ angular.module('chGoogleMap.models')
     if(angular.isDefined(keys.icon) && keys.icon == 'self') marker.icon = item;
     else if(angular.isDefined(keys.icon)) marker.icon = $getProperty(keys.icon, item);
 
+    if(angular.isDefined(keys.labelContent) && keys.labelContent == 'self') marker.labelContent = item;
+    else if(angular.isDefined(keys.labelContent)) marker.labelContent = $getProperty(keys.labelContent, item);
+
     if(angular.isDefined(keys.options) && keys.options == 'self') marker.options = item;
     else if(angular.isDefined(keys.options)) marker.options = $getProperty(keys.options, item);
+
+    marker.label = chLabel.fromItemAndAttr(item, keys);
 
     return marker;
   };
@@ -67,6 +73,7 @@ angular.module('chGoogleMap.models')
       marker.setOptions(this.options);
       marker.setPosition(this.position.$googleCoord());
       marker.setIcon(this.icon);
+      marker.$label = this.label.$googleLabel(map, scope, events);
 
       var _this = this;
       angular.forEach(events, function(fn,key){

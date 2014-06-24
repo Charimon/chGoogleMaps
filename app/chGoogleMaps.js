@@ -1,3 +1,204 @@
+/**
+ * @license
+ *
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * @fileoverview Map Label.
+ *
+ * @author Luke Mahe (lukem@google.com),
+ *         Chris Broadfoot (cbro@google.com)
+ */
+
+/**
+ * Creates a new Map Label
+ * @constructor
+ * @extends google.maps.OverlayView
+ * @param {Object.<string, *>=} opt_options Optional properties to set.
+ */
+function MapLabel(opt_options) {
+  this.set('fontFamily', 'sans-serif');
+  this.set('fontSize', 12);
+  this.set('fontColor', '#000000');
+  this.set('strokeWeight', 4);
+  this.set('strokeColor', '#ffffff');
+  this.set('align', 'center');
+
+  this.set('zIndex', 1e3);
+
+  this.setValues(opt_options);
+}
+MapLabel.prototype = new google.maps.OverlayView;
+
+window['MapLabel'] = MapLabel;
+
+
+/** @inheritDoc */
+MapLabel.prototype.changed = function(prop) {
+  switch (prop) {
+    case 'fontFamily':
+    case 'fontSize':
+    case 'fontColor':
+    case 'strokeWeight':
+    case 'strokeColor':
+    case 'align':
+    case 'text':
+      return this.drawCanvas_();
+    case 'maxZoom':
+    case 'minZoom':
+    case 'position':
+      return this.draw();
+  }
+};
+
+/**
+ * Draws the label to the canvas 2d context.
+ * @private
+ */
+MapLabel.prototype.drawCanvas_ = function() {
+  var canvas = this.canvas_;
+  if (!canvas) return;
+
+  var style = canvas.style;
+  style.zIndex = /** @type number */(this.get('zIndex'));
+
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = this.get('strokeColor');
+  ctx.fillStyle = this.get('fontColor');
+  ctx.font = this.get('fontSize') + 'px ' + this.get('fontFamily');
+
+  var strokeWeight = Number(this.get('strokeWeight'));
+
+  var text = this.get('text');
+  if (text) {
+    if (strokeWeight) {
+      ctx.lineWidth = strokeWeight;
+      ctx.strokeText(text, strokeWeight, strokeWeight);
+    }
+
+    ctx.fillText(text, strokeWeight, strokeWeight);
+
+    var textMeasure = ctx.measureText(text);
+    var textWidth = textMeasure.width + strokeWeight;
+    style.marginLeft = this.getMarginLeft_(textWidth) + 'px';
+    // Bring actual text top in line with desired latitude.
+    // Cheaper than calculating height of text.
+    style.marginTop = '-0.4em';
+  }
+};
+
+/**
+ * @inheritDoc
+ */
+MapLabel.prototype.onAdd = function() {
+  var canvas = this.canvas_ = document.createElement('canvas');
+  var style = canvas.style;
+  style.position = 'absolute';
+
+  var ctx = canvas.getContext('2d');
+  ctx.lineJoin = 'round';
+  ctx.textBaseline = 'top';
+
+  this.drawCanvas_();
+
+  var panes = this.getPanes();
+  if (panes) {
+    panes.mapPane.appendChild(canvas);
+  }
+};
+MapLabel.prototype['onAdd'] = MapLabel.prototype.onAdd;
+
+/**
+ * Gets the appropriate margin-left for the canvas.
+ * @private
+ * @param {number} textWidth  the width of the text, in pixels.
+ * @return {number} the margin-left, in pixels.
+ */
+MapLabel.prototype.getMarginLeft_ = function(textWidth) {
+  switch (this.get('align')) {
+    case 'left':
+      return 0;
+    case 'right':
+      return -textWidth;
+  }
+  return textWidth / -2;
+};
+
+/**
+ * @inheritDoc
+ */
+MapLabel.prototype.draw = function() {
+  var projection = this.getProjection();
+
+  if (!projection) {
+    // The map projection is not ready yet so do nothing
+    return;
+  }
+
+  var latLng = /** @type {google.maps.LatLng} */ (this.get('position'));
+  if (!latLng) {
+    return;
+  }
+  var pos = projection.fromLatLngToDivPixel(latLng);
+
+  var style = this.canvas_.style;
+
+  style['top'] = pos.y + 'px';
+  style['left'] = pos.x + 'px';
+
+  style['visibility'] = this.getVisible_();
+};
+MapLabel.prototype['draw'] = MapLabel.prototype.draw;
+
+/**
+ * Get the visibility of the label.
+ * @private
+ * @return {string} blank string if visible, 'hidden' if invisible.
+ */
+MapLabel.prototype.getVisible_ = function() {
+  var minZoom = /** @type number */(this.get('minZoom'));
+  var maxZoom = /** @type number */(this.get('maxZoom'));
+
+  if (minZoom === undefined && maxZoom === undefined) {
+    return '';
+  }
+
+  var map = this.getMap();
+  if (!map) {
+    return '';
+  }
+
+  var mapZoom = map.getZoom();
+  if (mapZoom < minZoom || mapZoom > maxZoom) {
+    return 'hidden';
+  }
+  return '';
+};
+
+/**
+ * @inheritDoc
+ */
+MapLabel.prototype.onRemove = function() {
+  var canvas = this.canvas_;
+  if (canvas && canvas.parentNode) {
+    canvas.parentNode.removeChild(canvas);
+  }
+};
+MapLabel.prototype['onRemove'] = MapLabel.prototype.onRemove;
 angular.module('chGoogleMap.models', []);
 angular.module('chGoogleMap', ['chGoogleMap.models']);
 (function() {
@@ -122,7 +323,77 @@ function $getProperty( propertyName, object ) {
 }
 
 angular.module('chGoogleMap.models')
-.factory('chMarker', ['$timeout', 'chCoordiante', function($timeout, chCoordiante){
+.factory('chLabel', ['$timeout', 'chCoordiante', function($timeout, chCoordiante){
+  function chLabel(){};
+
+  chLabel.fromAttrs = function(item) {
+    var position = chCoordiante.fromAttr(item.position);
+    if(!angular.isDefined(position)) throw "label must have a position key";
+
+    var label = new chLabel();
+    label.position = position;
+    label.text = item.labelText;
+
+    return label;
+  }
+
+  chLabel.fromItemAndAttr = function(item, keys) {
+    var position = null;
+    if(angular.isDefined(keys.position) && keys.position == 'self') position = chCoordiante.fromAttr(item)
+    else if(angular.isDefined(keys.position)) position = chCoordiante.fromAttr($getProperty(keys.position, item))
+    if(!angular.isDefined(position)) throw "label in markers must have a position key";    
+
+    var label = new chLabel();
+    label.position = position;
+
+    if(angular.isDefined(keys.labelText) && keys.labelText == 'self') label.text = item;
+    else if(angular.isDefined(keys.labelText)) label.text = $getProperty(keys.labelText, item);
+
+    return label;
+  };
+
+  chLabel.prototype = {
+    $googleLabel: function(map, scope, events){
+      if(this.text) {
+        var label = new MapLabel();
+        label.set('text', this.text);
+        label.set('fontSize', 14);
+        label.set('align', 'left');
+        label.set('position', this.position.$googleCoord());
+        label.set('map', map);
+
+        return label;  
+      } else {
+        return null;
+      }
+      
+    },
+    toString: function(){return this.position;},
+  };
+
+  return chLabel;
+}])
+
+
+})();
+(function() {
+"use strict";
+
+function $getProperty( propertyName, object ) {
+  var parts = propertyName.split( "." );
+  var length = parts.length;
+  var i;
+  var property = object || this;
+ 
+  for ( i = 0; i < length; i++ ) {
+    property = property[parts[i]];
+  }
+ 
+  return property;
+}
+
+angular.module('chGoogleMap.models')
+.factory('chMarker', ['$timeout', 'chCoordiante', 'chLabel', function($timeout, chCoordiante, chLabel){
   function chMarker(){};
 
   chMarker.fromAttrs = function(item) {
@@ -132,6 +403,7 @@ angular.module('chGoogleMap.models')
     var marker = new chMarker();
     marker.position = position;
     marker.icon = item.icon;
+    marker.label = chLabel.fromAttrs(item);
     marker.options = item.options;
 
     return marker;
@@ -149,8 +421,13 @@ angular.module('chGoogleMap.models')
     if(angular.isDefined(keys.icon) && keys.icon == 'self') marker.icon = item;
     else if(angular.isDefined(keys.icon)) marker.icon = $getProperty(keys.icon, item);
 
+    if(angular.isDefined(keys.labelContent) && keys.labelContent == 'self') marker.labelContent = item;
+    else if(angular.isDefined(keys.labelContent)) marker.labelContent = $getProperty(keys.labelContent, item);
+
     if(angular.isDefined(keys.options) && keys.options == 'self') marker.options = item;
     else if(angular.isDefined(keys.options)) marker.options = $getProperty(keys.options, item);
+
+    marker.label = chLabel.fromItemAndAttr(item, keys);
 
     return marker;
   };
@@ -174,6 +451,7 @@ angular.module('chGoogleMap.models')
       marker.setOptions(this.options);
       marker.setPosition(this.position.$googleCoord());
       marker.setIcon(this.icon);
+      marker.$label = this.label.$googleLabel(map, scope, events);
 
       var _this = this;
       angular.forEach(events, function(fn,key){
@@ -637,6 +915,7 @@ angular.module('chGoogleMap.models').directive("marker",['$timeout', 'chCoordian
       $scope.marker = chMarker.fromAttrs($scope).$googleMarker(mapController.getMap(), $scope, $scope.events);
 
       element.on('$destroy', function(s) {
+        if($scope.marer.$label) $scope.marer.$label.set('map', null);
         $scope.marker.setMap(null);
         $scope.marker = null;
       });
@@ -704,6 +983,7 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
 
       element.on('$destroy', function(s) {
         angular.forEach($scope.markers, function(marker, key){
+          if(marker.$label) marker.$label.set('map', null);
           marker.setMap(null);
         });
         $scope.markers = {};
@@ -713,7 +993,10 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
         $timeout(function(){
           //remove all old ones
           if(!angular.isDefined(newValue) || !angular.isArray(newValue) || newValue.length == 0) {
-            angular.forEach($scope.markers, function(marker, key){marker.setMap(null);});
+            angular.forEach($scope.markers, function(marker, key){
+              if(marker.$label) marker.$label.set('map', null);
+              marker.setMap(null);
+            });
             $scope.markers = {};
           }
 
@@ -740,7 +1023,10 @@ angular.module('chGoogleMap.models').directive("markers",['$timeout', 'chCoordia
 
           //remove markers that are no longer in data
           angular.forEach($scope.markers, function(value, key){
-            if(!angular.isDefined(markers[key])) value.setMap(null);
+            if(!angular.isDefined(markers[key])){
+              if(value.$label) value.$label.set('map', null);
+              value.setMap(null);
+            }
           });
 
           $scope.markers = markers;
