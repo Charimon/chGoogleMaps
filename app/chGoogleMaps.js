@@ -487,12 +487,13 @@ function $getProperty( propertyName, object ) {
 }
 
 angular.module('chGoogleMap.models')
-.factory('chPolygon', ['$timeout', 'chCoordiante', function($timeout, chCoordiante){
+.factory('chPolygon', ['$timeout', 'chCoordiante', 'chProjection', function($timeout, chCoordiante, chProjection){
   function chPolygon(){};
 
   chPolygon.fromAttrs = function(item) {
     var polygon = new chPolygon();
     polygon.options = item.options;
+    polygon.rightClickDelete = item.rightClickDelete;
     return polygon;
   }
 
@@ -501,6 +502,10 @@ angular.module('chGoogleMap.models')
 
     if(angular.isDefined(keys.options) && keys.options == 'self') polygon.options = item;
     else if(angular.isDefined(keys.options)) polygon.options = $getProperty(keys.options, item);
+
+    if(angular.isDefined(keys.rightClickDelete) && keys.rightClickDelete == 'self') polygon.rightClickDelete = item;
+    else if(angular.isDefined(keys.rightClickDelete)) polygon.rightClickDelete = $getProperty(keys.rightClickDelete, item);
+
 
     if(angular.isDefined(keys.path)) {
       polygon.path = [];
@@ -527,7 +532,24 @@ angular.module('chGoogleMap.models')
         }
       });
 
+      if(this.rightClickDelete) {
+        google.maps.event.addListener(polygon, 'rightclick', function(e){
+          if(e.vertex && polygon.getPath().length > 2) $timeout(function(){polygon.getPath().removeAt(e.vertex);});
+        });
+      }
+
       return polygon;
+    },
+    $projectionPath: function(map, googlePolygon) {
+      var gPath = googlePolygon.getPath();
+      var pathLength = gPath.getLength();
+      var mapProjection = map.getProjection();
+      var projections = [];
+      for(var i=0; i< pathLength; i++) {
+        var projection = mapProjection.fromLatLngToPoint(gPath.getAt(i));
+        projections.push(chProjection.fromGoogleProjection(projection));
+      }
+      return projections;
     },
     toString: function(){return this.position;},
   };
@@ -600,6 +622,32 @@ angular.module('chGoogleMap.models')
   };
 
   return chPolyline;
+}])
+
+
+})();
+(function() {
+"use strict";
+
+angular.module('chGoogleMap.models')
+.factory('chProjection', ['$timeout', function($timeout){
+  function chProjection(x, y){
+    this.x = null;
+    this.y = null;
+  };
+
+  chProjection.fromGoogleProjection = function(gProjection) {
+    var projection = new chProjection();
+    projection.x = gProjection.x;
+    projection.y = gProjection.y;
+    return projection;
+  };
+
+  chProjection.prototype = {
+    toString: function(){return "{" + this.x + ", " + this.y + "}"},
+  };
+
+  return chProjection;
 }])
 
 
@@ -915,7 +963,7 @@ angular.module('chGoogleMap.models').directive("marker",['$timeout', 'chCoordian
       $scope.marker = chMarker.fromAttrs($scope).$googleMarker(mapController.getMap(), $scope, $scope.events);
 
       element.on('$destroy', function(s) {
-        if($scope.marer.$label) $scope.marer.$label.set('map', null);
+        if($scope.marker.$label) $scope.marker.$label.set('map', null);
         $scope.marker.setMap(null);
         $scope.marker = null;
       });
@@ -1104,6 +1152,7 @@ angular.module('chGoogleMap.models').directive("polygon",['$timeout', 'chPolygon
     scope: {
       options:'=?',
       events:'=?',
+      rightClickDelete:'=?',
     },
     require:'^map',
     controller: ['$scope', function($scope){
@@ -1113,8 +1162,8 @@ angular.module('chGoogleMap.models').directive("polygon",['$timeout', 'chPolygon
       
     }],
     link: function($scope, element, attrs, mapController){
-      var a = chPolygon.fromAttrs($scope);
-      $scope.polygon = a.$googlePolygon(mapController.getMap(), $scope, $scope.events);
+      var p = chPolygon.fromAttrs($scope);
+      $scope.polygon = p.$googlePolygon(mapController.getMap(), $scope, $scope.events);
 
       $scope.polygon.setEditable($isTrue(attrs.editable));
       $scope.polygon.setVisible(angular.isDefined(attrs.visible)?$isTrue(attrs.visible):true);
@@ -1184,7 +1233,11 @@ angular.module('chGoogleMap.models').directive("polygons",['$timeout', 'chCoordi
               polygons[key] = $scope.polygons[key];
             } else {
               if(angular.isDefined(polygons[key])) throw "track by not unique";
-              polygons[key] = chPolygon.fromItemAndAttr(item, attrs).$googlePolygon(mapController.getMap(), $scope, $scope.events);
+
+              var p = chPolygon.fromItemAndAttr(item, attrs);
+              polygons[key] = p.$googlePolygon(mapController.getMap(), $scope, $scope.events);
+
+              item[attrs['projection']] = p.$projectionPath(mapController.getMap(), polygons[key]);
 
               // if(bounds) bounds.extend(polygons[key].getPosition());
             }

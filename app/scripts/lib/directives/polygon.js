@@ -9,6 +9,7 @@ angular.module('chGoogleMap.models').directive("polygon",['$timeout', 'chPolygon
     scope: {
       options:'=?',
       events:'=?',
+      rightClickDelete:'=?',
     },
     require:'^map',
     controller: ['$scope', function($scope){
@@ -18,8 +19,8 @@ angular.module('chGoogleMap.models').directive("polygon",['$timeout', 'chPolygon
       
     }],
     link: function($scope, element, attrs, mapController){
-      var a = chPolygon.fromAttrs($scope);
-      $scope.polygon = a.$googlePolygon(mapController.getMap(), $scope, $scope.events);
+      var p = chPolygon.fromAttrs($scope);
+      $scope.polygon = p.$googlePolygon(mapController.getMap(), $scope, $scope.events);
 
       $scope.polygon.setEditable($isTrue(attrs.editable));
       $scope.polygon.setVisible(angular.isDefined(attrs.visible)?$isTrue(attrs.visible):true);

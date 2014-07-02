@@ -46,7 +46,11 @@ angular.module('chGoogleMap.models').directive("polygons",['$timeout', 'chCoordi
               polygons[key] = $scope.polygons[key];
             } else {
               if(angular.isDefined(polygons[key])) throw "track by not unique";
-              polygons[key] = chPolygon.fromItemAndAttr(item, attrs).$googlePolygon(mapController.getMap(), $scope, $scope.events);
+
+              var p = chPolygon.fromItemAndAttr(item, attrs);
+              polygons[key] = p.$googlePolygon(mapController.getMap(), $scope, $scope.events);
+
+              item[attrs['projection']] = p.$projectionPath(mapController.getMap(), polygons[key]);
 
               // if(bounds) bounds.extend(polygons[key].getPosition());
             }
