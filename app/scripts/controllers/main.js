@@ -37,21 +37,20 @@ angular.module('chGoogleMapsApp')
     $scope.resetCenter = function(){
       $scope.map.center.latitude = 37.68;
       $scope.map.center.longitude = -97.33;
-    }
+    };
 
     $scope.resetBounds = function(){
       $scope.map.bounds.northeast = {
         latitude:54.467232292,
         longitude:-31.807539062,
-      }
+      };
       $scope.map.bounds.southwest = {
         latitude:33.280584554,
         longitude:-107.349531,
-      }
-    }
+      };
+    };
 
     $scope.reset = function(){
-      var markers = [];
       if($scope.toggled) {
         var markers = [];
         for(var i=0; i<10; i++) {

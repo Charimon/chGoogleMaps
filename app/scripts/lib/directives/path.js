@@ -16,8 +16,8 @@ angular.module('chGoogleMap.models').directive("path",['$timeout', 'chCoordiante
           angular.forEach($scope.coordinates, function(coordinate, i){
             coordinates.push(chCoordiante.fromAttr(coordinate).$googleCoord());
           });
-          if(angular.isDefined(controllers[0])) controllers[0].getPolygon().setPath(coordinates);
-          else if(angular.isDefined(controllers[1])) controllers[1].getPolyline().setPath(coordinates);
+          if(angular.isDefined(controllers[0]) && controllers[0].getPolygon()) controllers[0].getPolygon().setPath(coordinates);
+          else if(angular.isDefined(controllers[1]) && controllers[1].getPolygon()) controllers[1].getPolyline().setPath(coordinates);
         }
 
         var path;
