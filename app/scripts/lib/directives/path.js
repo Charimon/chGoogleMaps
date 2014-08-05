@@ -21,8 +21,8 @@ angular.module('chGoogleMap.models').directive("path",['$timeout', 'chCoordiante
         }
 
         var path;
-        if(angular.isDefined(controllers[0])) path = controllers[0].getPolygon().getPath();
-        else if(angular.isDefined(controllers[1])) path = controllers[1].getPolyline().getPath();
+        if(angular.isDefined(controllers[0]) && controllers[0].getPolygon()) path = controllers[0].getPolygon().getPath();
+        else if(angular.isDefined(controllers[1]) && controllers[1].getPolygon()) path = controllers[1].getPolyline().getPath();
         if(angular.isObject($scope.events) && path) {
           angular.forEach($scope.events, function(fn,key){
             if(angular.isFunction(fn)) {
