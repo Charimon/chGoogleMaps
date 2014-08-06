@@ -7,6 +7,8 @@ angular.module('chGoogleMap.models').directive("cone",['$timeout', 'chCoordiante
     scope: {
       center:'=',
       radius:'=',
+      start:'=',
+      end:'=',
       options:'=?',
       events:'=?',
     },
@@ -25,29 +27,29 @@ angular.module('chGoogleMap.models').directive("cone",['$timeout', 'chCoordiante
         $scope.cone = null;
       });
 
-      $scope.$watch("center", function(newValue, oldValue){
-        if(!angular.isDefined(newValue)) return;
+      // $scope.$watch("center", function(newValue, oldValue){
+      //   if(!angular.isDefined(newValue)) return;
         
-        $timeout(function(){
-          var newCoord = chCoordiante.fromAttr(newValue).$googleCoord();
-          if($scope.cone) $scope.cone.setCenter(newCoord);
-        });
-      });
+      //   $timeout(function(){
+      //     var newCoord = chCoordiante.fromAttr(newValue).$googleCoord();
+      //     if($scope.cone) $scope.cone.setCenter(newCoord);
+      //   });
+      // });
 
-      $scope.$watch("radius", function(newValue, oldValue){
-        if(!angular.isDefined(newValue)) return;
+      // $scope.$watch("radius", function(newValue, oldValue){
+      //   if(!angular.isDefined(newValue)) return;
         
-        $timeout(function(){
-          if($scope.cone) $scope.cone.setRadius(newValue);
-        });
-      });
+      //   $timeout(function(){
+      //     if($scope.cone) $scope.cone.setRadius(newValue);
+      //   });
+      // });
 
-      $scope.$watchCollection("options", function(newValue, oldValue){
-        if(angular.equals(newValue,oldValue)) return;
-        $timeout(function(){
-          $scope.cone.setOptions(newValue);
-        });
-      });
+      // $scope.$watchCollection("options", function(newValue, oldValue){
+      //   if(angular.equals(newValue,oldValue)) return;
+      //   $timeout(function(){
+      //     $scope.cone.setOptions(newValue);
+      //   });
+      // });
 
     },
   }

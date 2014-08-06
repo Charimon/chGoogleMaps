@@ -14,40 +14,28 @@ function $getProperty( propertyName, object ) {
   return property;
 }
 
-var EarthRadiusMeters = 6378137.0;
+function $getPathArc(center, radiusMeters, startAngle, endAngle){
+  if(!startAngle || !endAngle) return [];
+  var points = Array();
+  var angle = startAngle;
+  var step = 360/24;
+  if(endAngle < 0) endAngle += Math.ceil(-endAngle/360)*360;
 
-google.maps.LatLng.prototype.DestinationPoint = function (brng, dist) {
-  var R = EarthRadiusMeters; // earth's mean radius in meters
-  var brng = brng.toRad();
-  var lat1 = this.lat().toRad(), lon1 = this.lng().toRad();
-  var lat2 = Math.asin( Math.sin(lat1)*Math.cos(dist/R) + 
-                        Math.cos(lat1)*Math.sin(dist/R)*Math.cos(brng) );
-  var lon2 = lon1 + Math.atan2(Math.sin(brng)*Math.sin(dist/R)*Math.cos(lat1), 
-                               Math.cos(dist/R)-Math.sin(lat1)*Math.sin(lat2));
-
-  return new google.maps.LatLng(lat2.toDeg(), lon2.toDeg());
-}
+  var angle = Math.ceil(startAngle/step)*step;
+  if(angle == startAngle) angle += step;
 
 
-function $getPathArc(center, initialBearing, finalBearing, radius) {
-  var d2r = Math.PI / 180;   // degrees to radians 
-  var r2d = 180 / Math.PI;   // radians to degrees
-  var points = 32; 
+  points.push(center);
+  points.push(google.maps.geometry.spherical.computeOffset(center, radiusMeters, startAngle));
 
-  // find the raidus in lat/lon 
-  var rlat = (radius / EarthRadiusMeters) * r2d; 
-  var rlng = rlat / Math.cos(center.lat() * d2r); 
+  while(true) {
+    if(angle >= endAngle) break;
+    points.push(google.maps.geometry.spherical.computeOffset(center, radiusMeters, angle));
+    angle+=step;
+  }
+  points.push(google.maps.geometry.spherical.computeOffset(center, radiusMeters, endAngle));
 
-  var extp = new Array();
-  if (initialBearing > finalBearing) finalBearing += 360;
-  
-  var deltaBearing = finalBearing - initialBearing;
-  deltaBearing = deltaBearing/points;
-  for (var i=0; (i < points+1); i++)  { 
-    extp.push(center.DestinationPoint(initialBearing + i*deltaBearing, radius)); 
-    bounds.extend(extp[extp.length-1]);
-  } 
-  return extp;
+  return points;
 }
 
 angular.module('chGoogleMap.models')
@@ -62,6 +50,8 @@ angular.module('chGoogleMap.models')
     cone.center = center;
     cone.radius = item.radius;
     cone.options = item.options;
+    cone.start = item.start;
+    cone.end = item.end;
 
     return cone;
   }
@@ -81,6 +71,12 @@ angular.module('chGoogleMap.models')
     if(angular.isDefined(keys.options) && keys.options == 'self') cone.options = item;
     else if(angular.isDefined(keys.options)) cone.options = $getProperty(keys.options, item);
 
+    if(angular.isDefined(keys.start) && keys.start == 'self') cone.start = item;
+    else if(angular.isDefined(keys.start)) cone.start = $getProperty(keys.start, item);
+
+    if(angular.isDefined(keys.end) && keys.end == 'self') cone.end = item;
+    else if(angular.isDefined(keys.end)) cone.end = $getProperty(keys.end, item);
+
     return cone;
   };
 
@@ -90,9 +86,8 @@ angular.module('chGoogleMap.models')
       cone.setMap(map);
       cone.setOptions(this.options);
 
-      var path = getPathArc(this.center.$googleCoord(), 0, 100, 1000);
-      // cone.setCenter(this.center.$googleCoord());
-      // cone.setRadius(this.radius);
+      var path = $getPathArc(this.center.$googleCoord(), this.radius, this.start, this.end);
+      cone.setPath(path);
 
       var _this = this;
       angular.forEach(events, function(fn,key){

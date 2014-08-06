@@ -10,8 +10,8 @@
 angular.module('chGoogleMapsApp')
   .controller('MainCtrl', function ($scope) {
     $scope.markers = [];
-
     $scope.polygons = [];
+    $scope.cones = [];
 
     $scope.map = {
       zoom:4,
@@ -149,6 +149,23 @@ angular.module('chGoogleMapsApp')
         ];
       }
       $scope.circlesToggled = !$scope.circlesToggled;
+    }
+
+    $scope.resetCones = function(){
+      if($scope.conesToggled) {
+        $scope.cones = [
+          {id:1, options:{fillColor:'#0055ff',strokeWeight:1}, center:{latitude:46.812411, longitude:-118.217283}, start:25, end:100, radius:100000},
+          {id:2, options:{fillColor:'#0055ff',strokeWeight:1}, center:{latitude:46.752226, longitude:-102.660642}, start:25, end:100, radius:100000},
+          {id:3, options:{fillColor:'#0055ff',strokeWeight:1}, center:{latitude:43.657083, longitude:-85.346189}, start:25, end:100, radius:100000},
+        ];
+      } else {
+        $scope.cones = [
+          {id:11, options:{fillColor:'#0055ff',strokeWeight:1}, center:{latitude:37.524039, longitude:-109.867674}, start:25, end:100, radius:100000},
+          {id:12, options:{fillColor:'#0055ff',strokeWeight:1}, center:{latitude:41.981075, longitude:-112.504392}, start:25, end:100, radius:100000},
+          {id:13, options:{fillColor:'#0055ff',strokeWeight:1}, center:{latitude:37.244695, longitude:-87.543455}, start:25, end:100, radius:100000},
+        ];
+      }
+      $scope.conesToggled = !$scope.conesToggled;
     }
 
   });

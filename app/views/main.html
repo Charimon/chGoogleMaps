@@ -5,6 +5,7 @@
 <button ng-click='resetPolygons()'>reset polygons</button>
 <button ng-click='resetPolygonsHard()'>reset polygons hard</button>
 <button ng-click='resetCircles()'>reset circles</button>
+<button ng-click='resetCones()'>reset cones</button>
 <map type='terrain' center="map.center" zoom="map.zoom" bounds="map.bounds" draggable="true" pan="true" events="map.events">
   <!-- <marker ng-repeat="marker in markers track by marker.id" position="marker" icon="marker.icon" events='map.markerEvents'></marker> -->
   
@@ -15,4 +16,6 @@
   </polygon>
 
   <circle ng-repeat="circle in circles track by circle.id" center="circle.center" radius="circle.radius"></circle>
+
+  <cone ng-repeat="cone in cones track by cone.id" center="cone.center" options="cone.options" start="cone.start" end="cone.end" radius="cone.radius"></cone>
 </map>
